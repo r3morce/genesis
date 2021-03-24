@@ -11,6 +11,10 @@ xcode-select —-install
 if test ! $(which brew); then
     echo "Installing homebrew…"
     ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+    
+    echo 'export PATH="/opt/homebrew/opt/ruby/bin:$PATH"' >> ~/.zshrc
+    export LDFLAGS="-L/opt/homebrew/opt/ruby/lib"
+    export CPPFLAGS="-I/opt/homebrew/opt/ruby/include"
 fi
 
 # Update homebrew recipes
@@ -20,24 +24,34 @@ PACKAGES=(
     1password
     alfred
     bartycrouch
-    brave-browser
+    bettertouchtool
+    brave-browser 
     cocoapods
+    discord
     fastlane
     gitkraken
+    imagemagick
     iterm2
-    karabiner-elements
+    karabiner-elements 
     mactracker
     meetingbar
+    microsoft-teams
+    numi
     overkill
+    python@3.9
+    rbenv
     ruby
+    ruby@2.7
+    sentry-cli
     signal
     skitch
     slack
     spotify
     swiftgen
     swiftlint
+    visual-studio-code
     zeplin
-    zsh
+    zsh-autosuggestions
 )
 
 echo "Installing packages…"
