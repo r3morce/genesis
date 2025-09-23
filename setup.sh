@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Pop!_OS Software Installation Script
+# openSUSE Software Installation Script
 # Installiert Software in optimaler Reihenfolge
 
 set -e  # Script bei Fehlern beenden
@@ -37,29 +37,79 @@ fi
 
 # System Update
 log "System wird aktualisiert..."
-sudo apt update && sudo apt upgrade -y
+sudo zypper refresh
+sudo zypper update -y
+
+echo ""
+echo "NVIDIA-Tipps:"
+echo "- Nach Neustart: nvidia-settings für GPU-Konfiguration"
+echo "- Treiber-Status prüfen: nvidia-smi"
+echo "- Steam: NVIDIA GPU wird automatisch erkannt"
+echo "=================================="
+echo "Phase 1: NVIDIA-Treiber & System"
+echo "=================================="
+
+# 1. NVIDIA-Treiber Installation/Update
+log "Installiere/Update NVIDIA-Treiber..."
+if lspci | grep -i nvidia &> /dev/null; then
+    log "NVIDIA-GPU erkannt, installiere Treiber..."
+    
+    # NVIDIA Repository hinzufügen
+    if ! zypper lr | grep -q nvidia; then
+        sudo zypper addrepo --refresh https://download.nvidia.com/opensuse/tumbleweed NVIDIA
+        success "NVIDIA Repository hinzugefügt"
+    fi
+    
+    # Proprietary NVIDIA Treiber installieren
+    sudo zypper install -y nvidia-driver-G06 nvidia-settings nvidia-compute-utils
+    
+    # 32-bit Bibliotheken für Steam/Gaming
+    sudo zypper install -y nvidia-driver-G06-32bit
+    
+    success "NVIDIA-Treiber installiert"
+    warning "NEUSTART ERFORDERLICH nach Script-Ende für NVIDIA-Treiber!"
+else
+    warning "Keine NVIDIA-GPU gefunden, überspringe NVIDIA-Treiber"
+fi
 
 echo ""
 echo "=================================="
-echo "Phase 1: System-Grundlagen & Tools"
+echo "Phase 2: System-Grundlagen & Repos"
 echo "=================================="
 
-# 1. Basis-Tools zuerst installieren (für Repository-Management)
+# 2. Basis-Tools und Repositories
 log "Installiere Basis-Tools..."
-sudo apt install -y \
-    curl \
-    wget \
-    software-properties-common \
-    apt-transport-https \
-    ca-certificates \
-    gnupg \
-    lsb-release
-success "Basis-Tools installiert"
+sudo zypper install -y curl wget git
 
-# 2. Zsh Installation
+# Flatpak Repository hinzufügen (für Discord etc.)
+log "Richte Flatpak ein..."
+if ! command -v flatpak &> /dev/null; then
+    sudo zypper install -y flatpak
+    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+    success "Flatpak eingerichtet"
+else
+    warning "Flatpak ist bereits installiert"
+fi
+
+# Steam Repository hinzufügen
+log "Füge Steam Repository hinzu..."
+if ! zypper lr | grep -q games; then
+    sudo zypper addrepo -f https://download.opensuse.org/repositories/games/openSUSE_Tumbleweed/ games
+    sudo zypper refresh
+    success "Steam Repository hinzugefügt"
+else
+    warning "Steam Repository bereits vorhanden"
+fi
+
+echo ""
+echo "=================================="
+echo "Phase 3: Shell & Terminal"
+echo "=================================="
+
+# 3. Zsh Installation
 log "Installiere Zsh..."
 if ! command -v zsh &> /dev/null; then
-    sudo apt install -y zsh
+    sudo zypper install -y zsh
     success "Zsh installiert"
     
     # Shell wechseln
@@ -70,7 +120,7 @@ else
     warning "Zsh ist bereits installiert"
 fi
 
-# 3. P10k Installation
+# 4. P10k Installation
 log "Installiere Powerlevel10k..."
 if [ ! -d "$HOME/powerlevel10k" ]; then
     git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ~/powerlevel10k
@@ -82,17 +132,13 @@ fi
 
 echo ""
 echo "=================================="
-echo "Phase 2: Daten-Synchronisation"
+echo "Phase 4: Daten-Synchronisation"
 echo "=================================="
 
-# 3. Syncthing Installation
+# 5. Syncthing Installation
 log "Installiere Syncthing..."
 if ! command -v syncthing &> /dev/null; then
-    # Moderne Methode ohne apt-key (deprecated)
-    wget -qO- https://syncthing.net/release-key.gpg | sudo tee /usr/share/keyrings/syncthing-archive-keyring.gpg >/dev/null
-    echo "deb [signed-by=/usr/share/keyrings/syncthing-archive-keyring.gpg] https://apt.syncthing.net/ syncthing stable" | sudo tee /etc/apt/sources.list.d/syncthing.list
-    sudo apt update
-    sudo apt install -y syncthing
+    sudo zypper install -y syncthing
     systemctl --user enable syncthing
     systemctl --user start syncthing
     success "Syncthing installiert und gestartet"
@@ -101,10 +147,10 @@ else
     warning "Syncthing ist bereits installiert"
 fi
 
-# 4. KeepassXC Installation
+# 6. KeepassXC Installation
 log "Installiere KeepassXC..."
 if ! command -v keepassxc &> /dev/null; then
-    sudo apt install -y keepassxc
+    sudo zypper install -y keepassxc
     success "KeepassXC installiert"
 else
     warning "KeepassXC ist bereits installiert"
@@ -112,24 +158,22 @@ fi
 
 echo ""
 echo "=================================="
-echo "Phase 3: Entwicklungstools"
+echo "Phase 5: Entwicklungstools"
 echo "=================================="
 
-# 5. LazyVim (benötigt Neovim)
-log "Installiere Neovim und LazyVim..."
-if ! command -v nvim &> /dev/null; then
-    # Neovim PPA für neueste Version (jetzt funktioniert add-apt-repository)
-    sudo add-apt-repository ppa:neovim-ppa/unstable -y
-    sudo apt update
-    sudo apt install -y neovim git build-essential
-    success "Neovim installiert"
-else
-    warning "Neovim ist bereits installiert"
-    # Sicherstellen, dass build-essential installiert ist
-    sudo apt install -y build-essential
-fi
+# 7. Build-Tools und Entwicklung
+log "Installiere Entwicklungstools..."
+sudo zypper install -y \
+    gcc \
+    make \
+    cmake \
+    git \
+    vim \
+    neovim \
+    patterns-devel-base-devel_basis
+success "Entwicklungstools installiert"
 
-# LazyVim Setup
+# 8. LazyVim Setup
 if [ ! -d "$HOME/.config/nvim" ]; then
     log "Installiere LazyVim..."
     git clone https://github.com/LazyVim/starter ~/.config/nvim
@@ -140,19 +184,28 @@ fi
 
 echo ""
 echo "=================================="
-echo "Phase 4: Desktop-Anwendungen"
+echo "Phase 6: Desktop-Anwendungen"
 echo "=================================="
 
-# 6. Firefox ist bereits vorinstalliert
+# 9. Firefox (sollte vorinstalliert sein)
 log "Firefox prüfen..."
 if command -v firefox &> /dev/null; then
     success "Firefox ist bereits installiert"
 else
-    sudo apt install -y firefox
+    sudo zypper install -y firefox
     success "Firefox installiert"
 fi
 
-# 7. Discord Installation (via Flatpak - ist in Pop!_OS bereits aktiviert)
+# 10. LibreOffice (meist vorinstalliert)
+log "LibreOffice prüfen..."
+if command -v libreoffice &> /dev/null; then
+    success "LibreOffice ist bereits installiert"
+else
+    sudo zypper install -y libreoffice
+    success "LibreOffice installiert"
+fi
+
+# 11. Discord Installation (via Flatpak)
 log "Installiere Discord..."
 if ! flatpak list | grep -q "com.discordapp.Discord"; then
     flatpak install -y flathub com.discordapp.Discord
@@ -161,36 +214,64 @@ else
     warning "Discord ist bereits installiert"
 fi
 
-# 8. Steam Installation
+echo ""
+echo "=================================="
+echo "Phase 7: Gaming"
+echo "=================================="
+
+# 12. Steam Installation
 log "Installiere Steam..."
 if ! command -v steam &> /dev/null; then
-    # Steam über apt installieren
-    sudo apt install -y steam-installer
+    sudo zypper install -y steam steam-devices
     success "Steam installiert"
 else
     warning "Steam ist bereits installiert"
 fi
 
-# 9. Gaming Tools
-log "Installiere zusätzliche Gaming Tools..."
-sudo apt install -y lutris gamemode mangohud
-success "Lutris, GameMode und MangoHud installiert"
+# 13. Gaming Tools
+log "Installiere Gaming-Tools..."
+sudo zypper install -y lutris
+success "Lutris installiert"
+
+# MangoHud für FPS-Overlay (falls verfügbar)
+if zypper search mangohud | grep -q mangohud; then
+    sudo zypper install -y mangohud
+    success "MangoHud installiert"
+else
+    warning "MangoHud nicht in Repositories gefunden"
+fi
 
 echo ""
 echo "=================================="
-echo "Phase 5: System-Tools"
+echo "Phase 8: System-Tools"
 echo "=================================="
 
-# 10. Deja Dup (Backups)
-log "Installiere Deja Dup..."
+# 14. System-Monitoring
+log "Installiere System-Tools..."
+sudo zypper install -y \
+    htop \
+    tree \
+    unzip \
+    curl \
+    wget
+success "System-Tools installiert"
+
+# 15. Backup-Tool
+log "Installiere Backup-Tools..."
 if ! command -v deja-dup &> /dev/null; then
-    sudo apt install -y deja-dup
-    success "Deja Dup installiert"
+    # Deja Dup falls verfügbar, sonst Alternativen
+    if zypper search deja-dup | grep -q deja-dup; then
+        sudo zypper install -y deja-dup
+        success "Deja Dup installiert"
+    else
+        sudo zypper install -y rsync
+        success "Rsync installiert (für Backups)"
+    fi
 else
-    warning "Deja Dup ist bereits installiert"
+    warning "Backup-Tool ist bereits installiert"
 fi
 
-# 11. Tailscale Installation
+# 16. Tailscale Installation
 log "Installiere Tailscale..."
 if ! command -v tailscale &> /dev/null; then
     log "Lade Tailscale Installationsscript..."
@@ -200,12 +281,6 @@ if ! command -v tailscale &> /dev/null; then
 else
     warning "Tailscale ist bereits installiert"
 fi
-
-# 12. Weitere nützliche Tools
-log "Installiere weitere Tools..."
-# Nur die Tools installieren, die noch fehlen könnten
-sudo apt install -y htop tree
-success "Zusätzliche Tools installiert"
 
 echo ""
 echo "=================================="
@@ -226,6 +301,11 @@ echo ""
 warning "WICHTIG: Nach dem Neustart läuft Zsh als Standard-Shell!"
 echo ""
 echo "Gaming-Tipps:"
-echo "- MangoHud für FPS-Overlay: mangohud %command% in Steam Launch Options"
-echo "- GameMode wird automatisch von Steam verwendet"
+echo "- Steam Proton: Settings → Steam Play → Enable Proton for all titles"
+echo "- MangoHud (falls installiert): mangohud %command% in Steam Launch Options"
 echo "- Lutris für Epic Games, GOG, etc."
+echo ""
+echo "openSUSE-spezifische Tipps:"
+echo "- YaST für System-Konfiguration: sudo yast2"
+echo "- Zypper Pakete suchen: zypper search PAKETNAME"
+echo "- Software-Verwaltung: YaST → Software-Verwaltung"
