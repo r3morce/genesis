@@ -41,10 +41,22 @@ sudo apt update && sudo apt upgrade -y
 
 echo ""
 echo "=================================="
-echo "Phase 1: System-Grundlagen"
+echo "Phase 1: System-Grundlagen & Tools"
 echo "=================================="
 
-# 1. Zsh Installation
+# 1. Basis-Tools zuerst installieren (für Repository-Management)
+log "Installiere Basis-Tools..."
+sudo apt install -y \
+    curl \
+    wget \
+    software-properties-common \
+    apt-transport-https \
+    ca-certificates \
+    gnupg \
+    lsb-release
+success "Basis-Tools installiert"
+
+# 2. Zsh Installation
 log "Installiere Zsh..."
 if ! command -v zsh &> /dev/null; then
     sudo apt install -y zsh
@@ -58,7 +70,7 @@ else
     warning "Zsh ist bereits installiert"
 fi
 
-# 2. P10k Installation
+# 3. P10k Installation
 log "Installiere Powerlevel10k..."
 if [ ! -d "$HOME/powerlevel10k" ]; then
     git clone --depth=1 https://github.com/romkatv/powerlevel10k.git ~/powerlevel10k
@@ -76,9 +88,9 @@ echo "=================================="
 # 3. Syncthing Installation
 log "Installiere Syncthing..."
 if ! command -v syncthing &> /dev/null; then
-    # Syncthing Repository hinzufügen
-    curl -s https://syncthing.net/release-key.txt | sudo apt-key add -
-    echo "deb https://apt.syncthing.net/ syncthing stable" | sudo tee /etc/apt/sources.list.d/syncthing.list
+    # Moderne Methode ohne apt-key (deprecated)
+    wget -qO- https://syncthing.net/release-key.gpg | sudo tee /usr/share/keyrings/syncthing-archive-keyring.gpg >/dev/null
+    echo "deb [signed-by=/usr/share/keyrings/syncthing-archive-keyring.gpg] https://apt.syncthing.net/ syncthing stable" | sudo tee /etc/apt/sources.list.d/syncthing.list
     sudo apt update
     sudo apt install -y syncthing
     systemctl --user enable syncthing
@@ -106,13 +118,15 @@ echo "=================================="
 # 5. LazyVim (benötigt Neovim)
 log "Installiere Neovim und LazyVim..."
 if ! command -v nvim &> /dev/null; then
-    # Neovim PPA für neueste Version
+    # Neovim PPA für neueste Version (jetzt funktioniert add-apt-repository)
     sudo add-apt-repository ppa:neovim-ppa/unstable -y
     sudo apt update
-    sudo apt install -y neovim git
+    sudo apt install -y neovim git build-essential
     success "Neovim installiert"
 else
     warning "Neovim ist bereits installiert"
+    # Sicherstellen, dass build-essential installiert ist
+    sudo apt install -y build-essential
 fi
 
 # LazyVim Setup
@@ -187,22 +201,10 @@ else
     warning "Tailscale ist bereits installiert"
 fi
 
-# 12. Zusätzliche nützliche Tools
-log "Installiere zusätzliche Tools..."
-sudo apt install -y \
-    curl \
-    wget \
-    git \
-    vim \
-    htop \
-    tree \
-    unzip \
-    build-essential \
-    software-properties-common \
-    apt-transport-https \
-    ca-certificates \
-    gnupg \
-    lsb-release
+# 12. Weitere nützliche Tools
+log "Installiere weitere Tools..."
+# Nur die Tools installieren, die noch fehlen könnten
+sudo apt install -y htop tree
 success "Zusätzliche Tools installiert"
 
 echo ""
