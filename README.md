@@ -1,28 +1,17 @@
-# openSUSE Software Installation Script
+# pop_OS Software Installation Script
 
-Automatisierte Installation von Software für openSUSE.
-
-## Software
-- Zsh + Powerlevel10k
-- Syncthing
-- KeepassXC  
-- LazyVim
-- Firefox
-- Discord
-- Steam
-- Deja Dup
-- Tailscale
+Automatisierte Installation von Software.
 
 ## Installation
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yourusername/yourrepo/main/setup.sh | bash
+curl -fsSL https://raw.githubusercontent.com/r3morce/genesis/main/setup.sh | bash
 ```
 
 oder
 
 ```bash
-wget https://raw.githubusercontent.com/yourusername/yourrepo/main/setup.sh
+wget https://raw.githubusercontent.com/r3morce/genesis/main/setup.sh
 chmod +x setup.sh
 ./setup.sh
 ```
