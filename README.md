@@ -1,4 +1,4 @@
-# pop_OS Software Installation Script
+# Linux Software Installation Script
 
 Automatisierte Installation von Software.
 
