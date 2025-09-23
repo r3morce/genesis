@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# openSUSE Software Installation Script
+# Pop!_OS Software Installation Script
 # Installiert Software in optimaler Reihenfolge
 
 set -e  # Script bei Fehlern beenden
@@ -37,8 +37,7 @@ fi
 
 # System Update
 log "System wird aktualisiert..."
-sudo zypper refresh
-sudo zypper update -y
+sudo apt update && sudo apt upgrade -y
 
 echo ""
 echo "=================================="
@@ -48,7 +47,7 @@ echo "=================================="
 # 1. Zsh Installation
 log "Installiere Zsh..."
 if ! command -v zsh &> /dev/null; then
-    sudo zypper install -y zsh
+    sudo apt install -y zsh
     success "Zsh installiert"
     
     # Shell wechseln
@@ -77,7 +76,11 @@ echo "=================================="
 # 3. Syncthing Installation
 log "Installiere Syncthing..."
 if ! command -v syncthing &> /dev/null; then
-    sudo zypper install -y syncthing
+    # Syncthing Repository hinzufügen
+    curl -s https://syncthing.net/release-key.txt | sudo apt-key add -
+    echo "deb https://apt.syncthing.net/ syncthing stable" | sudo tee /etc/apt/sources.list.d/syncthing.list
+    sudo apt update
+    sudo apt install -y syncthing
     systemctl --user enable syncthing
     systemctl --user start syncthing
     success "Syncthing installiert und gestartet"
@@ -89,7 +92,7 @@ fi
 # 4. KeepassXC Installation
 log "Installiere KeepassXC..."
 if ! command -v keepassxc &> /dev/null; then
-    sudo zypper install -y keepassxc
+    sudo apt install -y keepassxc
     success "KeepassXC installiert"
 else
     warning "KeepassXC ist bereits installiert"
@@ -103,7 +106,10 @@ echo "=================================="
 # 5. LazyVim (benötigt Neovim)
 log "Installiere Neovim und LazyVim..."
 if ! command -v nvim &> /dev/null; then
-    sudo zypper install -y neovim git
+    # Neovim PPA für neueste Version
+    sudo add-apt-repository ppa:neovim-ppa/unstable -y
+    sudo apt update
+    sudo apt install -y neovim git
     success "Neovim installiert"
 else
     warning "Neovim ist bereits installiert"
@@ -123,23 +129,17 @@ echo "=================================="
 echo "Phase 4: Desktop-Anwendungen"
 echo "=================================="
 
-# 6. Firefox Installation
-log "Installiere Firefox..."
-if ! command -v firefox &> /dev/null; then
-    sudo zypper install -y firefox
-    success "Firefox installiert"
+# 6. Firefox ist bereits vorinstalliert
+log "Firefox prüfen..."
+if command -v firefox &> /dev/null; then
+    success "Firefox ist bereits installiert"
 else
-    warning "Firefox ist bereits installiert"
+    sudo apt install -y firefox
+    success "Firefox installiert"
 fi
 
-# 7. Discord Installation (via Flatpak)
+# 7. Discord Installation (via Flatpak - ist in Pop!_OS bereits aktiviert)
 log "Installiere Discord..."
-if ! command -v flatpak &> /dev/null; then
-    sudo zypper install -y flatpak
-    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
-    success "Flatpak installiert"
-fi
-
 if ! flatpak list | grep -q "com.discordapp.Discord"; then
     flatpak install -y flathub com.discordapp.Discord
     success "Discord installiert"
@@ -150,30 +150,33 @@ fi
 # 8. Steam Installation
 log "Installiere Steam..."
 if ! command -v steam &> /dev/null; then
-    # Steam Repository hinzufügen
-    sudo zypper addrepo -f https://download.opensuse.org/repositories/games/openSUSE_Tumbleweed/ games
-    sudo zypper refresh
-    sudo zypper install -y steam steam-devices
+    # Steam über apt installieren
+    sudo apt install -y steam-installer
     success "Steam installiert"
 else
     warning "Steam ist bereits installiert"
 fi
+
+# 9. Gaming Tools
+log "Installiere zusätzliche Gaming Tools..."
+sudo apt install -y lutris gamemode mangohud
+success "Lutris, GameMode und MangoHud installiert"
 
 echo ""
 echo "=================================="
 echo "Phase 5: System-Tools"
 echo "=================================="
 
-# 9. Deja Dup Installation
+# 10. Deja Dup (Backups)
 log "Installiere Deja Dup..."
 if ! command -v deja-dup &> /dev/null; then
-    sudo zypper install -y deja-dup
+    sudo apt install -y deja-dup
     success "Deja Dup installiert"
 else
     warning "Deja Dup ist bereits installiert"
 fi
 
-# 10. Tailscale Installation
+# 11. Tailscale Installation
 log "Installiere Tailscale..."
 if ! command -v tailscale &> /dev/null; then
     log "Lade Tailscale Installationsscript..."
@@ -183,6 +186,24 @@ if ! command -v tailscale &> /dev/null; then
 else
     warning "Tailscale ist bereits installiert"
 fi
+
+# 12. Zusätzliche nützliche Tools
+log "Installiere zusätzliche Tools..."
+sudo apt install -y \
+    curl \
+    wget \
+    git \
+    vim \
+    htop \
+    tree \
+    unzip \
+    build-essential \
+    software-properties-common \
+    apt-transport-https \
+    ca-certificates \
+    gnupg \
+    lsb-release
+success "Zusätzliche Tools installiert"
 
 echo ""
 echo "=================================="
@@ -197,5 +218,12 @@ echo "2. Konfiguriere Syncthing unter http://127.0.0.1:8384"
 echo "3. Importiere deinen KeePass-Tresor"
 echo "4. Aktiviere Tailscale mit: sudo tailscale up"
 echo "5. Starte Powerlevel10k Konfiguration mit: p10k configure"
+echo "6. Steam: Aktiviere Proton in den Steam-Einstellungen"
+echo "7. Lutris: Konfiguriere für Non-Steam Games"
 echo ""
 warning "WICHTIG: Nach dem Neustart läuft Zsh als Standard-Shell!"
+echo ""
+echo "Gaming-Tipps:"
+echo "- MangoHud für FPS-Overlay: mangohud %command% in Steam Launch Options"
+echo "- GameMode wird automatisch von Steam verwendet"
+echo "- Lutris für Epic Games, GOG, etc."
